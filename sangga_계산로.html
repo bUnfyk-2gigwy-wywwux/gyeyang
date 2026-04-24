@@ -1,0 +1,360 @@
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가로변 상가 현황</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#f5f5f3;color:#1a1a18;padding:1.5rem;font-size:14px;line-height:1.6}
+h1{font-size:16px;font-weight:500;margin-bottom:.5rem}
+#status-msg{font-size:12px;color:#5f5e5a;padding:4px 0 10px;min-height:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem}
+.stat{border-radius:8px;padding:11px 14px}
+.stat-lbl{font-size:12px;margin-bottom:2px}
+.stat-num{font-size:22px;font-weight:500}
+.controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+button{background:#fff;border:0.5px solid #b4b2a9;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;color:#1a1a18;font-family:inherit}
+button:hover{background:#f1efe8}
+.deploy-bar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;background:#F0F7FF;border:0.5px solid #B8D4F0;border-radius:8px;padding:8px 12px;flex-wrap:wrap}
+.deploy-bar span{font-size:12px;color:#2563EB;flex:1;min-width:160px}
+.btn-deploy{background:#2563EB;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn-deploy:hover{background:#1d4ed8}
+.street-wrap{overflow-x:auto;border:0.5px solid #d3d1c7;border-radius:12px;padding:14px 16px 12px;margin-bottom:1rem;background:#fff}
+.street-inner{min-width:max-content}
+.side-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.side-tag{font-size:11px;font-weight:500;color:#5f5e5a;background:#f1efe8;border-radius:8px;padding:5px 10px;white-space:nowrap;min-width:46px;text-align:center;align-self:stretch;display:flex;align-items:center;justify-content:center}
+.road-strip{height:34px;background:#f1efe8;display:flex;align-items:center;padding:0 12px;margin:5px 0;border-radius:4px;gap:8px;min-width:100%}
+.road-label{font-size:11px;color:#888780;white-space:nowrap}
+.road-dashes{flex:1;border-top:1.5px dashed #b4b2a9}
+.shops-row{display:flex;gap:6px;align-items:flex-end;min-height:140px;padding:2px 0}
+.shops-row.rr{align-items:flex-start}
+.shop-tile{width:120px;min-height:138px;border:0.5px solid #d3d1c7;border-radius:8px;background:#fff;padding:9px 9px 8px;cursor:pointer;transition:border-color .12s;display:flex;flex-direction:column;gap:3px}
+.shop-tile:hover{border-color:#888780}
+.shop-tile.active{border:2px solid #F4C0D1}
+.shop-tile.vacant-tile{background:#FDFAFA}
+.shop-num{font-size:10px;color:#888780}
+.shop-name{font-size:13px;font-weight:500;color:#1a1a18;word-break:break-all;line-height:1.3}
+.shop-prev{font-size:11px;color:#D4537E;word-break:break-all;line-height:1.3}
+.shop-type,.shop-area{font-size:11px;color:#5f5e5a}
+.shop-addr{font-size:10px;color:#888780;line-height:1.3;word-break:break-all}
+.badge-vacant{font-size:11px;font-weight:500;padding:2px 7px;border-radius:10px;align-self:flex-start;margin-top:auto;background:#FBEAF0;color:#993556}
+.spacer{flex:1}
+.add-tile{width:120px;min-height:138px;border:0.5px dashed #b4b2a9;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#888780;gap:3px}
+.add-tile:hover{background:#f1efe8}
+#ep{border:0.5px solid #d3d1c7;border-radius:12px;padding:1rem 1.25rem;background:#fff;display:none;margin-bottom:1rem}
+.etitle{font-size:14px;font-weight:500;margin-bottom:1rem}
+.egrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:1rem}
+.egrid .full{grid-column:1/-1}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:12px;color:#5f5e5a}
+input,select{border:0.5px solid #b4b2a9;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;color:#1a1a18;background:#fff;width:100%}
+input:focus,select:focus{outline:none;border-color:#888780}
+.area-wrap{display:flex;align-items:center;gap:6px}
+.area-wrap input{flex:1}
+.area-preview{font-size:11px;color:#5f5e5a;white-space:nowrap;min-width:44px}
+.prev-row{display:none}
+.eact{display:flex;gap:8px;justify-content:flex-end;border-top:0.5px solid #d3d1c7;padding-top:12px}
+.bdel{color:#a32d2d}
+.road-name-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.road-name-row input{font-size:12px;flex:1;max-width:200px}
+.road-name-lbl{font-size:12px;color:#5f5e5a}
+.disclaimer{font-size:11px;color:#888780;margin-top:1.5rem;padding-top:1rem;border-top:0.5px solid #d3d1c7}
+</style>
+</head>
+<body>
+
+<h1>가로변 상가 현황</h1>
+<div id="status-msg">CSV 다운로드 완료 → Excel에서 바로 열 수 있습니다.</div>
+
+<div class="stats">
+  <div class="stat" style="background:#f1efe8">
+    <div class="stat-lbl" style="color:#5f5e5a">전체 상가</div>
+    <div class="stat-num" id="s-total">77</div>
+  </div>
+  <div class="stat" style="background:#f1efe8">
+    <div class="stat-lbl" style="color:#5f5e5a">영업중</div>
+    <div class="stat-num" id="s-open">76</div>
+  </div>
+  <div class="stat" style="background:#FBEAF0">
+    <div class="stat-lbl" style="color:#993556">공실</div>
+    <div class="stat-num" style="color:#993556" id="s-vacant">1</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="setF('all')">전체</button>
+  <button onclick="setF('open')">영업중</button>
+  <button onclick="setF('vacant')">공실</button>
+  <button onclick="dlCsv()" style="margin-left:auto">CSV 다운로드 ↗</button>
+  <button onclick="openF(null,'left')">+ 좌측 추가</button>
+  <button onclick="openF(null,'right')">+ 우측 추가</button>
+</div>
+
+<div class="deploy-bar">
+  <span>📤 입력 완료 후 GitHub에 올릴 파일 저장 (데이터 포함)</span>
+  <button class="btn-deploy" onclick="dlDeployHtml()">GitHub 배포용 저장</button>
+</div>
+
+<div class="street-wrap">
+  <div class="street-inner">
+    <div class="road-name-row">
+      <span class="road-name-lbl">도로명:</span>
+      <input type="text" id="road-name" value="" oninput="saveRoad()" placeholder="예) 계산로">
+      <span style="font-size:11px;color:#888780;margin-left:auto">진행방향 →</span>
+    </div>
+    <div class="side-row">
+      <div class="side-tag">좌측</div>
+      <div class="shops-row" id="left-shops"><div class="shop-tile"><div class="shop-num">좌-1</div><div class="shop-name">메가커피</div><div class="shop-type">카페</div><div class="shop-area">33.0㎡ · 10.0평</div><div class="shop-addr">계양대로 156</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-2</div><div class="shop-name">현지양꼬치</div><div class="shop-type">양꼬치</div><div class="shop-area">73.7㎡ · 22.3평</div><div class="shop-addr">계산로 97</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-3</div><div class="shop-name">황금제국</div><div class="shop-type">금은방</div><div class="shop-addr">계산로 97</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-4</div><div class="shop-name">전자담배24시</div><div class="shop-type">전자담배</div><div class="shop-addr">계산로 97</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-5</div><div class="shop-name">빽다방</div><div class="shop-type">카페</div><div class="shop-area">47.1㎡ · 14.2평</div><div class="shop-addr">계산로 99</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-6</div><div class="shop-name">생마차</div><div class="shop-type">호프</div><div class="shop-area">54.5㎡ · 16.5평</div><div class="shop-addr">계산로 99</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-7</div><div class="shop-name">종로빈대떡</div><div class="shop-type">전집</div><div class="shop-area">52.5㎡ · 15.9평</div><div class="shop-addr">계산로 99</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-8</div><div class="shop-name">털보네국수와전</div><div class="shop-type">전집</div><div class="shop-area">35.7㎡ · 10.8평</div><div class="shop-addr">계산로103번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-9</div><div class="shop-name">행복지짐이</div><div class="shop-type">전집</div><div class="shop-area">35.7㎡ · 10.8평</div><div class="shop-addr">계산로103번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-10</div><div class="shop-name">아라노래방</div><div class="shop-type">노래방</div><div class="shop-addr">계산로103번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-11</div><div class="shop-name">쿠시냥</div><div class="shop-type">호프</div><div class="shop-area">31.6㎡ · 9.6평</div><div class="shop-addr">계산로103번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-12</div><div class="shop-name">타코방</div><div class="shop-type">타코야키</div><div class="shop-area">22.7㎡ · 6.9평</div><div class="shop-addr">계산로 103</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-13</div><div class="shop-name">교대원</div><div class="shop-type">중국집</div><div class="shop-area">98.2㎡ · 29.7평</div><div class="shop-addr">계산로 103</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-14</div><div class="shop-name">스마일뽑기샵</div><div class="shop-type">오락</div><div class="shop-area">28.6㎡ · 8.7평</div><div class="shop-addr">계산로 105</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-15</div><div class="shop-name">양계장집아들</div><div class="shop-type">호프</div><div class="shop-area">57.1㎡ · 17.3평</div><div class="shop-addr">계산로 105</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-16</div><div class="shop-name">돼지우리</div><div class="shop-type">고기</div><div class="shop-area">55.0㎡ · 16.6평</div><div class="shop-addr">계산로 105</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-17</div><div class="shop-name">노랑통닭</div><div class="shop-type">호프</div><div class="shop-area">59.7㎡ · 18.1평</div><div class="shop-addr">계산로 105-1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-18</div><div class="shop-name">장수골</div><div class="shop-type">고기</div><div class="shop-area">29.5㎡ · 8.9평</div><div class="shop-addr">계산로 107</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-19</div><div class="shop-name">심심상인</div><div class="shop-type">주점</div><div class="shop-area">25.9㎡ · 7.8평</div><div class="shop-addr">계산로 107</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-20</div><div class="shop-name">크라운호프</div><div class="shop-type">호프</div><div class="shop-area">110.3㎡ · 33.4평</div><div class="shop-addr">계산로 109</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-21</div><div class="shop-name">캐치팡오락실</div><div class="shop-type">오락실</div><div class="shop-area">49.1㎡ · 14.9평</div><div class="shop-addr">계산로 111</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-22</div><div class="shop-name">세븐일레븐</div><div class="shop-type">편의점</div><div class="shop-area">6.6㎡ · 2.0평</div><div class="shop-addr">계산로 113</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-23</div><div class="shop-name">돈골식당</div><div class="shop-type">한식당</div><div class="shop-area">36.0㎡ · 10.9평</div><div class="shop-addr">계산로 113</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-24</div><div class="shop-name">철길부산집</div><div class="shop-type">오뎅바</div><div class="shop-area">39.1㎡ · 11.8평</div><div class="shop-addr">계산로 113</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-25</div><div class="shop-name">등갈비에꼬치다</div><div class="shop-type">고기</div><div class="shop-area">57.5㎡ · 17.4평</div><div class="shop-addr">계산로 115</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-26</div><div class="shop-name">옛날통닭</div><div class="shop-type">호프</div><div class="shop-area">32.0㎡ · 9.7평</div><div class="shop-addr">계산로 115</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-27</div><div class="shop-name">러키비키</div><div class="shop-type">오락실</div><div class="shop-area">32.0㎡ · 9.7평</div><div class="shop-addr">계산로 115</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-28</div><div class="shop-name">역전할머니맥주</div><div class="shop-type">호프</div><div class="shop-area">98.0㎡ · 29.6평</div><div class="shop-addr">계산로 117</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-29</div><div class="shop-name">세븐일레븐</div><div class="shop-type">편의점</div><div class="shop-area">6.6㎡ · 2.0평</div><div class="shop-addr">계산로 119</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-30</div><div class="shop-name">바바카페</div><div class="shop-type">카페</div><div class="shop-area">236.4㎡ · 71.5평</div><div class="shop-addr">계산로 121</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-31</div><div class="shop-name">시선</div><div class="shop-type">이자카야</div><div class="shop-area">50.7㎡ · 15.3평</div><div class="shop-addr">계산로 123</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-32</div><div class="shop-name">통영수산물회센타</div><div class="shop-type">횟집</div><div class="shop-area">109.3㎡ · 33.1평</div><div class="shop-addr">계산로 125</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">좌-33</div><div class="shop-name">현대카오디오</div><div class="shop-type">카오디오</div><div class="shop-addr">계산로 127</div><div class="spacer"></div></div><div class="add-tile"><div style="font-size:18px">+</div><div style="font-size:11px">추가</div></div></div>
+    </div>
+    <div class="road-strip">
+      <span class="road-label">←</span>
+      <div class="road-dashes"></div>
+      <span id="road-display" style="font-size:12px;color:#5f5e5a;white-space:nowrap">계산로</span>
+      <div class="road-dashes"></div>
+      <span class="road-label">→</span>
+    </div>
+    <div class="side-row">
+      <div class="side-tag">우측</div>
+      <div class="shops-row rr" id="right-shops"><div class="shop-tile"><div class="shop-num">우-1</div><div class="shop-name">뉴욕양복점</div><div class="shop-type">양복점</div><div class="shop-addr">계산로 152</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-2</div><div class="shop-name">3번출구포차</div><div class="shop-type">포차</div><div class="shop-area">48.4㎡ · 14.6평</div><div class="shop-addr">계양대로 152</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-3</div><div class="shop-name">호치킨</div><div class="shop-type">호프</div><div class="shop-addr">계양대로 152</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-4</div><div class="shop-name">봉수비어</div><div class="shop-type">호프</div><div class="shop-area">37.0㎡ · 11.2평</div><div class="shop-addr">계산로98번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-5</div><div class="shop-name">싱싱회천국</div><div class="shop-type">횟지</div><div class="shop-area">85.1㎡ · 25.7평</div><div class="shop-addr">계산로98번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-6</div><div class="shop-name">만석구이포차</div><div class="shop-type">포차</div><div class="shop-area">39.5㎡ · 11.9평</div><div class="shop-addr">계산로98번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-7</div><div class="shop-name">성공부동산</div><div class="shop-type">부동산</div><div class="shop-addr">계산로100번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-8</div><div class="shop-name">세븐일레븐</div><div class="shop-type">편의점</div><div class="shop-area">10.0㎡ · 3.0평</div><div class="shop-addr">계산로100번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-9</div><div class="shop-name">신마포갈매기</div><div class="shop-type">고기</div><div class="shop-area">55.6㎡ · 16.8평</div><div class="shop-addr">계산로 102</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-10</div><div class="shop-name">깡우동</div><div class="shop-type">한식</div><div class="shop-area">55.6㎡ · 16.8평</div><div class="shop-addr">계산로 102</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-11</div><div class="shop-name">삼식이네고깃집</div><div class="shop-type">고기</div><div class="shop-area">55.6㎡ · 16.8평</div><div class="shop-addr">계산로 102</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-12</div><div class="shop-name">ZPC</div><div class="shop-type">성인오락실</div><div class="shop-addr">계산로104번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-13</div><div class="shop-name">대청</div><div class="shop-type">고기</div><div class="shop-area">86.2㎡ · 26.1평</div><div class="shop-addr">계산로 106</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-14</div><div class="shop-name">뒷골목돗갈비</div><div class="shop-type">고기</div><div class="shop-addr">계산로 108</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-15</div><div class="shop-name">주락</div><div class="shop-type">주점</div><div class="shop-area">95.5㎡ · 28.9평</div><div class="shop-addr">계산로 110</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-16</div><div class="shop-name">김포쌀상회</div><div class="shop-type">쌀</div><div class="shop-addr">계산로 112</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-17</div><div class="shop-name">치킨매니아</div><div class="shop-type">호프</div><div class="shop-area">75.0㎡ · 22.7평</div><div class="shop-addr">계산로 112</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-18</div><div class="shop-name">해돈</div><div class="shop-type">고기</div><div class="shop-area">53.3㎡ · 16.1평</div><div class="shop-addr">계산로112번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-19</div><div class="shop-name">노른자부동산</div><div class="shop-type">부동산</div><div class="shop-addr">계산로112번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-20</div><div class="shop-name">교대포차</div><div class="shop-type">포차</div><div class="shop-area">40.0㎡ · 12.1평</div><div class="shop-addr">계산로112번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-21</div><div class="shop-name">대양참치</div><div class="shop-type">참치</div><div class="shop-area">47.6㎡ · 14.4평</div><div class="shop-addr">계산로 116</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-22</div><div class="shop-name">둘둘치킨</div><div class="shop-type">호프</div><div class="shop-area">72.0㎡ · 21.8평</div><div class="shop-addr">계산로 116</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-23</div><div class="shop-name">인쌩맥주</div><div class="shop-type">호프</div><div class="shop-area">80.8㎡ · 24.4평</div><div class="shop-addr">계산로 118-1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-24</div><div class="shop-name">스페이스멀티게임존</div><div class="shop-type">오락실</div><div class="shop-area">75.7㎡ · 22.9평</div><div class="shop-addr">계산로 122</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-25</div><div class="shop-name">목포집</div><div class="shop-type">홍어</div><div class="shop-area">24.0㎡ · 7.3평</div><div class="shop-addr">계산로 124</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-26</div><div class="shop-name">분주</div><div class="shop-type">한식</div><div class="shop-area">24.0㎡ · 7.3평</div><div class="shop-addr">계산로 124</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-27</div><div class="shop-name">계양부동산</div><div class="shop-type">부동산</div><div class="shop-addr">계산로 124</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-28</div><div class="shop-name">왕손숯불구이</div><div class="shop-type">고기</div><div class="shop-area">179.5㎡ · 54.3평</div><div class="shop-addr">계산로126번길 2</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-29</div><div class="shop-name">아이스크림에빠지다</div><div class="shop-type">아이스크림</div><div class="shop-addr">계산로126번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-30</div><div class="shop-name">상강도</div><div class="shop-type">고기</div><div class="shop-area">26.5㎡ · 8.0평</div><div class="shop-addr">계산로126번길 1</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-31</div><div class="shop-name">투다리</div><div class="shop-type">꼬치</div><div class="shop-area">65.8㎡ · 19.9평</div><div class="shop-addr">계산로 128</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-32</div><div class="shop-name">유래초밥</div><div class="shop-type">고기</div><div class="shop-area">65.8㎡ · 19.9평</div><div class="shop-addr">계산로 128</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-33</div><div class="shop-name">유성포차</div><div class="shop-type">포차</div><div class="shop-area">55.4㎡ · 16.8평</div><div class="shop-addr">계산로 130</div><div class="spacer"></div></div><div class="shop-tile vacant-tile"><div class="shop-num">우-34</div><div class="shop-prev">황토방</div><div class="shop-addr">계산로 130</div><div class="spacer"></div><span class="badge-vacant">공실</span></div><div class="shop-tile"><div class="shop-num">우-35</div><div class="shop-name">육객</div><div class="shop-type">고기</div><div class="shop-area">64.0㎡ · 19.4평</div><div class="shop-addr">계산로 132</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-36</div><div class="shop-name">미향족발</div><div class="shop-type">일식</div><div class="shop-area">64.0㎡ · 19.4평</div><div class="shop-addr">계산로 132</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-37</div><div class="shop-name">또구이돼지막창</div><div class="shop-type">막창</div><div class="shop-area">64.0㎡ · 19.4평</div><div class="shop-addr">계산로 134</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-38</div><div class="shop-name">시골막걸리</div><div class="shop-type">막걸리</div><div class="shop-area">29.8㎡ · 9.0평</div><div class="shop-addr">계산로 134</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-39</div><div class="shop-name">삼익부동산</div><div class="shop-type">부동산</div><div class="shop-addr">계산로 134</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-40</div><div class="shop-name">미스터클럽</div><div class="shop-type">미용실</div><div class="shop-area">30.0㎡ · 9.1평</div><div class="shop-addr">계산로 134</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-41</div><div class="shop-name">장수골흑염소</div><div class="shop-type">흑염소</div><div class="shop-area">40.3㎡ · 12.2평</div><div class="shop-addr">계산로 136</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-42</div><div class="shop-name">천금순대국</div><div class="shop-type">순대국</div><div class="shop-area">51.1㎡ · 15.5평</div><div class="shop-addr">계산로 138</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-43</div><div class="shop-name">택이네조개전골</div><div class="shop-type">한식</div><div class="shop-area">106.4㎡ · 32.2평</div><div class="shop-addr">계산로 138</div><div class="spacer"></div></div><div class="shop-tile"><div class="shop-num">우-44</div><div class="shop-name">농축협</div><div class="shop-type">은행</div><div class="shop-addr">주부토로 479</div><div class="spacer"></div></div><div class="add-tile"><div style="font-size:18px">+</div><div style="font-size:11px">추가</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="ep" style="display: none;">
+  <div class="etitle" id="etitle">상가 추가</div>
+  <div class="egrid">
+    <div class="fld">
+      <label>측면</label>
+      <select id="f-side"><option value="left">좌측</option><option value="right">우측</option></select>
+    </div>
+    <div class="fld">
+      <label>순번</label>
+      <input type="number" id="f-order" min="1" placeholder="1">
+    </div>
+    <div class="fld">
+      <label>상호명</label>
+      <input type="text" id="f-name" placeholder="상호명 입력">
+    </div>
+    <div class="fld">
+      <label>업종</label>
+      <input type="text" id="f-type" placeholder="예) 음식점, 미용실">
+    </div>
+    <div class="fld">
+      <label>면적 (㎡)</label>
+      <div class="area-wrap">
+        <input type="number" id="f-area" min="0" step="0.1" placeholder="예) 33.0" oninput="updateAreaPreview()">
+        <span class="area-preview" id="area-preview"></span>
+      </div>
+    </div>
+    <div class="fld">
+      <label>보증금/월세/권리금</label>
+      <input type="text" id="f-bld" placeholder="예) 500/60, 권리금 500">
+    </div>
+    <div class="fld full">
+      <label>주소</label>
+      <input type="text" id="f-addr" placeholder="예) 계산로 123, 1층 101호">
+    </div>
+    <div class="fld">
+      <label>공실 여부</label>
+      <select id="f-status" onchange="togglePrev()">
+        <option value="open">영업중 (표시 없음)</option>
+        <option value="vacant">공실</option>
+      </select>
+    </div>
+    <div class="fld prev-row" id="prev-row" style="display: none;">
+      <label style="color:#993556">이전 상호명</label>
+      <input type="text" id="f-prev" placeholder="예) 홍익분식">
+    </div>
+    <div class="fld full">
+      <label>비고</label>
+      <input type="text" id="f-note" placeholder="메모 (선택)">
+    </div>
+  </div>
+  <div class="eact">
+    <button class="bdel" id="btn-del" onclick="delShop()" style="display: none;">삭제</button>
+    <button onclick="cancelE()">취소</button>
+    <button onclick="saveShop()">저장</button>
+  </div>
+</div>
+
+<div class="disclaimer">※ 본 자료는 내부 관리용으로, 실제 계약 시 공부서류(건축물대장, 등기부등본 등)를 반드시 확인하시기 바랍니다.</div>
+
+<script>
+// ── 데이터 (GitHub 배포용 저장 버튼이 여기에 실제 데이터를 채워 넣습니다)
+let shops = [{"side":"left","order":1,"name":"메가커피","type":"카페","area":"33","addr":"계양대로 156","bld":"","status":"open","prev":"","note":"","id":"1777008827791"},{"side":"left","order":2,"name":"현지양꼬치","type":"양꼬치","area":"73.7","addr":"계산로 97","bld":"","status":"open","prev":"","note":"","id":"1777008859619"},{"side":"left","order":3,"name":"황금제국","type":"금은방","area":"","addr":"계산로 97","bld":"","status":"open","prev":"","note":"","id":"1777008886722"},{"side":"left","order":4,"name":"전자담배24시","type":"전자담배","area":"","addr":"계산로 97","bld":"","status":"open","prev":"","note":"","id":"1777008939584"},{"side":"left","order":5,"name":"빽다방","type":"카페","area":"47.1","addr":"계산로 99","bld":"","status":"open","prev":"","note":"","id":"1777008971100"},{"side":"left","order":6,"name":"생마차","type":"호프","area":"54.5","addr":"계산로 99","bld":"","status":"open","prev":"","note":"","id":"1777009008796"},{"side":"left","order":7,"name":"종로빈대떡","type":"전집","area":"52.5","addr":"계산로 99","bld":"","status":"open","prev":"","note":"","id":"1777009082741"},{"side":"left","order":8,"name":"털보네국수와전","type":"전집","area":"35.7","addr":"계산로103번길 1","bld":"","status":"open","prev":"","note":"","id":"1777009132009"},{"side":"left","order":9,"name":"행복지짐이","type":"전집","area":"35.7","addr":"계산로103번길 1","bld":"","status":"open","prev":"","note":"","id":"1777009173532"},{"side":"left","order":10,"name":"아라노래방","type":"노래방","area":"","addr":"계산로103번길 1","bld":"","status":"open","prev":"","note":"","id":"1777009214035"},{"side":"left","order":11,"name":"쿠시냥","type":"호프","area":"31.6","addr":"계산로103번길 1","bld":"","status":"open","prev":"","note":"","id":"1777009241109"},{"side":"left","order":12,"name":"타코방","type":"타코야키","area":"22.7","addr":"계산로 103","bld":"","status":"open","prev":"","note":"","id":"1777009272985"},{"side":"right","order":1,"name":"뉴욕양복점","type":"양복점","area":"","addr":"계산로 152","bld":"","status":"open","prev":"","note":"","id":"1777009302808"},{"side":"left","order":13,"name":"교대원","type":"중국집","area":"98.2","addr":"계산로 103","bld":"","status":"open","prev":"","note":"","id":"1777009356569"},{"side":"left","order":14,"name":"스마일뽑기샵","type":"오락","area":"28.6","addr":"계산로 105","bld":"","status":"open","prev":"","note":"","id":"1777009382821"},{"side":"left","order":15,"name":"양계장집아들","type":"호프","area":"57.1","addr":"계산로 105","bld":"","status":"open","prev":"","note":"","id":"1777009430340"},{"side":"left","order":16,"name":"돼지우리","type":"고기","area":"55.0","addr":"계산로 105","bld":"","status":"open","prev":"","note":"","id":"1777009453157"},{"side":"left","order":17,"name":"노랑통닭","type":"호프","area":"59.7","addr":"계산로 105-1","bld":"","status":"open","prev":"","note":"","id":"1777009482908"},{"side":"left","order":18,"name":"장수골","type":"고기","area":"29.5","addr":"계산로 107","bld":"","status":"open","prev":"","note":"","id":"1777009527960"},{"side":"left","order":19,"name":"심심상인","type":"주점","area":"25.9","addr":"계산로 107","bld":"","status":"open","prev":"","note":"","id":"1777009586429"},{"side":"left","order":20,"name":"크라운호프","type":"호프","area":"110.3","addr":"계산로 109","bld":"","status":"open","prev":"","note":"","id":"1777009634865"},{"side":"left","order":21,"name":"캐치팡오락실","type":"오락실","area":"49.1","addr":"계산로 111","bld":"","status":"open","prev":"","note":"","id":"1777009659599"},{"side":"left","order":22,"name":"세븐일레븐","type":"편의점","area":"6.6","addr":"계산로 113","bld":"","status":"open","prev":"","note":"","id":"1777009688951"},{"side":"left","order":23,"name":"돈골식당","type":"한식당","area":"36","addr":"계산로 113","bld":"","status":"open","prev":"","note":"","id":"1777009707331"},{"side":"left","order":24,"name":"철길부산집","type":"오뎅바","area":"39.1","addr":"계산로 113","bld":"","status":"open","prev":"","note":"","id":"1777009727785"},{"side":"left","order":25,"name":"등갈비에꼬치다","type":"고기","area":"57.5","addr":"계산로 115","bld":"","status":"open","prev":"","note":"","id":"1777009753451"},{"side":"left","order":26,"name":"옛날통닭","type":"호프","area":"32","addr":"계산로 115","bld":"","status":"open","prev":"","note":"","id":"1777009779415"},{"side":"left","order":27,"name":"러키비키","type":"오락실","area":"32","addr":"계산로 115","bld":"","status":"open","prev":"","note":"","id":"1777009796936"},{"side":"left","order":28,"name":"역전할머니맥주","type":"호프","area":"98","addr":"계산로 117","bld":"","status":"open","prev":"","note":"","id":"1777009853154"},{"side":"left","order":29,"name":"세븐일레븐","type":"편의점","area":"6.6","addr":"계산로 119","bld":"","status":"open","prev":"","note":"","id":"1777009876356"},{"side":"left","order":30,"name":"바바카페","type":"카페","area":"236.4","addr":"계산로 121","bld":"","status":"open","prev":"","note":"","id":"1777009900540"},{"side":"left","order":31,"name":"시선","type":"이자카야","area":"50.7","addr":"계산로 123","bld":"","status":"open","prev":"","note":"","id":"1777009926403"},{"side":"left","order":32,"name":"통영수산물회센타","type":"횟집","area":"109.3","addr":"계산로 125","bld":"","status":"open","prev":"","note":"","id":"1777009953609"},{"side":"left","order":33,"name":"현대카오디오","type":"카오디오","area":"","addr":"계산로 127","bld":"","status":"open","prev":"","note":"","id":"1777009975593"},{"side":"right","order":2,"name":"3번출구포차","type":"포차","area":"48.4","addr":"계양대로 152","bld":"","status":"open","prev":"","note":"","id":"1777010036328"},{"side":"right","order":3,"name":"호치킨","type":"호프","area":"","addr":"계양대로 152","bld":"","status":"open","prev":"","note":"","id":"1777010066146"},{"side":"right","order":4,"name":"봉수비어","type":"호프","area":"37","addr":"계산로98번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010088447"},{"side":"right","order":5,"name":"싱싱회천국","type":"횟지","area":"85.1","addr":"계산로98번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010112581"},{"side":"right","order":6,"name":"만석구이포차","type":"포차","area":"39.5","addr":"계산로98번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010141099"},{"side":"right","order":7,"name":"성공부동산","type":"부동산","area":"","addr":"계산로100번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010162900"},{"side":"right","order":8,"name":"세븐일레븐","type":"편의점","area":"10","addr":"계산로100번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010185700"},{"side":"right","order":9,"name":"신마포갈매기","type":"고기","area":"55.6","addr":"계산로 102","bld":"","status":"open","prev":"","note":"","id":"1777010208118"},{"side":"right","order":10,"name":"깡우동","type":"한식","area":"55.6","addr":"계산로 102","bld":"","status":"open","prev":"","note":"","id":"1777010230302"},{"side":"right","order":11,"name":"삼식이네고깃집","type":"고기","area":"55.6","addr":"계산로 102","bld":"","status":"open","prev":"","note":"","id":"1777010255203"},{"side":"right","order":12,"name":"ZPC","type":"성인오락실","area":"","addr":"계산로104번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010295472"},{"side":"right","order":13,"name":"대청","type":"고기","area":"86.2","addr":"계산로 106","bld":"","status":"open","prev":"","note":"","id":"1777010314405"},{"side":"right","order":14,"name":"뒷골목돗갈비","type":"고기","area":"","addr":"계산로 108","bld":"","status":"open","prev":"","note":"","id":"1777010340769"},{"side":"right","order":15,"name":"주락","type":"주점","area":"95.5","addr":"계산로 110","bld":"","status":"open","prev":"","note":"","id":"1777010361424"},{"side":"right","order":16,"name":"김포쌀상회","type":"쌀","area":"","addr":"계산로 112","bld":"","status":"open","prev":"","note":"","id":"1777010378941"},{"side":"right","order":17,"name":"치킨매니아","type":"호프","area":"75.0","addr":"계산로 112","bld":"","status":"open","prev":"","note":"","id":"1777010422243"},{"side":"right","order":18,"name":"해돈","type":"고기","area":"53.3","addr":"계산로112번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010446873"},{"side":"right","order":19,"name":"노른자부동산","type":"부동산","area":"","addr":"계산로112번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010471711"},{"side":"right","order":20,"name":"교대포차","type":"포차","area":"40.0","addr":"계산로112번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010494112"},{"side":"right","order":21,"name":"대양참치","type":"참치","area":"47.6","addr":"계산로 116","bld":"","status":"open","prev":"","note":"","id":"1777010518680"},{"side":"right","order":22,"name":"둘둘치킨","type":"호프","area":"72.0","addr":"계산로 116","bld":"","status":"open","prev":"","note":"","id":"1777010540364"},{"side":"right","order":23,"name":"인쌩맥주","type":"호프","area":"80.8","addr":"계산로 118-1","bld":"","status":"open","prev":"","note":"","id":"1777010571982"},{"side":"right","order":24,"name":"스페이스멀티게임존","type":"오락실","area":"75.7","addr":"계산로 122","bld":"","status":"open","prev":"","note":"","id":"1777010603317"},{"side":"right","order":25,"name":"목포집","type":"홍어","area":"24","addr":"계산로 124","bld":"","status":"open","prev":"","note":"","id":"1777010628980"},{"side":"right","order":26,"name":"분주","type":"한식","area":"24","addr":"계산로 124","bld":"","status":"open","prev":"","note":"","id":"1777010666893"},{"side":"right","order":27,"name":"계양부동산","type":"부동산","area":"","addr":"계산로 124","bld":"","status":"open","prev":"","note":"","id":"1777010684772"},{"side":"right","order":28,"name":"왕손숯불구이","type":"고기","area":"179.5","addr":"계산로126번길 2","bld":"","status":"open","prev":"","note":"","id":"1777010720711"},{"side":"right","order":29,"name":"아이스크림에빠지다","type":"아이스크림","area":"","addr":"계산로126번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010745979"},{"side":"right","order":30,"name":"상강도","type":"고기","area":"26.5","addr":"계산로126번길 1","bld":"","status":"open","prev":"","note":"","id":"1777010768079"},{"side":"right","order":31,"name":"투다리","type":"꼬치","area":"65.8","addr":"계산로 128","bld":"","status":"open","prev":"","note":"","id":"1777010812448"},{"side":"right","order":32,"name":"유래초밥","type":"고기","area":"65.8","addr":"계산로 128","bld":"","status":"open","prev":"","note":"","id":"1777010839932"},{"side":"right","order":33,"name":"유성포차","type":"포차","area":"55.4","addr":"계산로 130","bld":"","status":"open","prev":"","note":"","id":"1777010863050"},{"side":"right","order":34,"name":"황토방","type":"","area":"","addr":"계산로 130","bld":"","status":"vacant","prev":"황토방","note":"","id":"1777010931936"},{"side":"right","order":35,"name":"육객","type":"고기","area":"64","addr":"계산로 132","bld":"","status":"open","prev":"","note":"","id":"1777010958436"},{"side":"right","order":36,"name":"미향족발","type":"일식","area":"64","addr":"계산로 132","bld":"","status":"open","prev":"","note":"","id":"1777010978687"},{"side":"right","order":37,"name":"또구이돼지막창","type":"막창","area":"64","addr":"계산로 134","bld":"","status":"open","prev":"","note":"","id":"1777010998547"},{"side":"right","order":38,"name":"시골막걸리","type":"막걸리","area":"29.8","addr":"계산로 134","bld":"","status":"open","prev":"","note":"","id":"1777011024072"},{"side":"right","order":39,"name":"삼익부동산","type":"부동산","area":"","addr":"계산로 134","bld":"","status":"open","prev":"","note":"","id":"1777011043273"},{"side":"right","order":40,"name":"미스터클럽","type":"미용실","area":"30","addr":"계산로 134","bld":"","status":"open","prev":"","note":"","id":"1777011060974"},{"side":"right","order":41,"name":"장수골흑염소","type":"흑염소","area":"40.3","addr":"계산로 136","bld":"","status":"open","prev":"","note":"","id":"1777011088641"},{"side":"right","order":42,"name":"천금순대국","type":"순대국","area":"51.1","addr":"계산로 138","bld":"","status":"open","prev":"","note":"","id":"1777011118859"},{"side":"right","order":43,"name":"택이네조개전골","type":"한식","area":"106.4","addr":"계산로 138","bld":"","status":"open","prev":"","note":"","id":"1777011155690"},{"side":"right","order":44,"name":"농축협","type":"은행","area":"","addr":"주부토로 479","bld":"","status":"open","prev":"","note":"","id":"1777011174424"}];
+
+// ── 상수
+const _fname = (location.pathname.split('/').pop()||'sangga').replace(/\.html$/i,'');
+const LS_SHOPS = 'gyeyang-shops-' + _fname;
+const LS_ROAD  = 'gyeyang-road-'  + _fname;
+
+// ── 유틸
+function pyung(s){ if(!s||isNaN(s))return ''; return (parseFloat(s)/3.3058).toFixed(1)+'평'; }
+function areaStr(s){ if(!s||isNaN(s)||parseFloat(s)===0)return ''; return parseFloat(s).toFixed(1)+'㎡ · '+pyung(s); }
+function updateAreaPreview(){ document.getElementById('area-preview').textContent = pyung(document.getElementById('f-area').value)||''; }
+function msg(t){ document.getElementById('status-msg').textContent = t; }
+function togglePrev(){ document.getElementById('prev-row').style.display = document.getElementById('f-status').value==='vacant'?'flex':'none'; }
+
+// ── 초기 로드
+function load(){
+  try{
+    const v = localStorage.getItem(LS_SHOPS);
+    if(v){ shops = JSON.parse(v); }
+    // 누락 필드 보정
+    shops.forEach(s=>{
+      if(!s.addr) s.addr=''; if(!s.bld) s.bld='';
+      if(!s.prev) s.prev=''; if(s.area===undefined) s.area='';
+    });
+    msg(shops.length ? '저장된 데이터 불러옴 ('+shops.length+'개)' : '새로 입력해 주세요.');
+  }catch(e){ shops=[]; msg('새로 입력해 주세요.'); }
+
+  try{
+    const rn = localStorage.getItem(LS_ROAD)||'';
+    document.getElementById('road-name').value = rn;
+    document.getElementById('road-display').textContent = rn||'—';
+  }catch(e){}
+
+  render();
+}
+
+// ── 저장
+function sv(){ try{ localStorage.setItem(LS_SHOPS, JSON.stringify(shops)); }catch(e){} }
+function saveRoad(){
+  const v = document.getElementById('road-name').value;
+  document.getElementById('road-display').textContent = v||'—';
+  try{ localStorage.setItem(LS_ROAD, v); }catch(e){}
+}
+
+// ── 렌더링
+function render(){
+  document.getElementById('s-total').textContent   = shops.length;
+  document.getElementById('s-open').textContent    = shops.filter(s=>s.status==='open').length;
+  document.getElementById('s-vacant').textContent  = shops.filter(s=>s.status==='vacant').length;
+  renderSide('left'); renderSide('right');
+}
+
+function renderSide(side){
+  const c = document.getElementById(side+'-shops');
+  const list = shops.filter(s=>s.side===side&&(flt==='all'||s.status===flt)).sort((a,b)=>a.order-b.order);
+  c.innerHTML='';
+  list.forEach(s=>c.appendChild(mkTile(s)));
+  const a = document.createElement('div'); a.className='add-tile';
+  a.innerHTML='<div style="font-size:18px">+</div><div style="font-size:11px">추가</div>';
+  a.onclick=()=>openF(null,side); c.appendChild(a);
+}
+
+function mkTile(s){
+  const d=document.createElement('div'); const isV=s.status==='vacant';
+  d.className='shop-tile'+(isV?' vacant-tile':'')+(eid===s.id?' active':'');
+  d.onclick=()=>openF(s.id);
+  const nm = isV
+    ? (s.prev ? '<div class="shop-prev">'+s.prev+'</div>' : '<div class="shop-prev" style="opacity:0.4">이전 상호 없음</div>')
+    : '<div class="shop-name">'+(s.name||'—')+'</div>';
+  const ty = isV ? '' : '<div class="shop-type">'+(s.type||'')+'</div>';
+  const ar = areaStr(s.area) ? '<div class="shop-area">'+areaStr(s.area)+'</div>' : '';
+  const ad = s.addr ? '<div class="shop-addr">'+s.addr+'</div>' : '';
+  const bg = isV ? '<span class="badge-vacant">공실</span>' : '';
+  const nt = s.note ? '<div style="font-size:10px;color:#888780">'+s.note+'</div>' : '';
+  d.innerHTML='<div class="shop-num">'+(s.side==='left'?'좌':'우')+'-'+s.order+'</div>'+nm+ty+ar+ad+'<div class="spacer"></div>'+bg+nt;
+  return d;
+}
+
+// ── 폼
+let eid=null, flt='all';
+
+function openF(id,defSide){
+  eid=id; document.getElementById('ep').style.display='block';
+  const del=document.getElementById('btn-del');
+  if(id){
+    const s=shops.find(x=>x.id===id);
+    document.getElementById('etitle').textContent='상가 수정';
+    document.getElementById('f-side').value=s.side;
+    document.getElementById('f-order').value=s.order;
+    document.getElementById('f-name').value=s.name||'';
+    document.getElementById('f-type').value=s.type||'';
+    document.getElementById('f-area').value=s.area||'';
+    document.getElementById('f-addr').value=s.addr||'';
+    document.getElementById('f-bld').value=s.bld||'';
+    document.getElementById('f-status').value=s.status==='vacant'?'vacant':'open';
+    document.getElementById('f-prev').value=s.prev||'';
+    document.getElementById('f-note').value=s.note||'';
+    del.style.display='';
+  }else{
+    document.getElementById('etitle').textContent='상가 추가';
+    const side=defSide||'left';
+    const mx=Math.max(0,...shops.filter(s=>s.side===side).map(s=>s.order),0);
+    document.getElementById('f-side').value=side;
+    document.getElementById('f-order').value=mx+1;
+    ['f-name','f-type','f-area','f-addr','f-bld','f-prev','f-note'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('f-status').value='open';
+    del.style.display='none';
+  }
+  updateAreaPreview(); togglePrev(); render();
+  setTimeout(()=>document.getElementById('ep').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+function saveShop(){
+  const data={
+    side:  document.getElementById('f-side').value,
+    order: parseInt(document.getElementById('f-order').value)||1,
+    name:  document.getElementById('f-name').value.trim(),
+    type:  document.getElementById('f-type').value.trim(),
+    area:  document.getElementById('f-area').value,
+    addr:  document.getElementById('f-addr').value.trim(),
+    bld:   document.getElementById('f-bld').value.trim(),
+    status:document.getElementById('f-status').value,
+    prev:  document.getElementById('f-prev').value.trim(),
+    note:  document.getElementById('f-note').value.trim(),
+  };
+  if(eid){ const i=shops.findIndex(s=>s.id===eid); shops[i]={...shops[i],...data}; }
+  else{ shops.push({...data, id:Date.now().toString()}); }
+  eid=null; document.getElementById('ep').style.display='none';
+  msg('저장 완료 (총 '+shops.length+'개)'); sv(); render();
+}
+
+function delShop(){
+  if(!confirm('이 항목을 삭제하시겠습니까?'))return;
+  shops=shops.filter(s=>s.id!==eid); eid=null;
+  document.getElementById('ep').style.display='none';
+  msg('삭제 완료 (총 '+shops.length+'개)'); sv(); render();
+}
+
+function cancelE(){ eid=null; document.getElementById('ep').style.display='none'; render(); }
+function setF(f){ flt=f; render(); }
+
+// ── CSV 다운로드 (외부 라이브러리 불필요)
+function csvEsc(v){
+  const s=String(v===null||v===undefined?'':v);
+  return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+function dlCsv(){
+  const rn=document.getElementById('road-name').value||'가로변 도로';
+  const sorted=[...shops].sort((a,b)=>{ if(a.side!==b.side)return a.side==='left'?-1:1; return a.order-b.order; });
+  const hdr=['순번','측면','주소','보증금/월세/권리금','상호명','업종','면적(㎡)','면적(평)','이전 상호명','공실여부','비고'];
+  const rows=sorted.map(s=>{
+    const sq=parseFloat(s.area)||''; const py=sq?(sq/3.3058).toFixed(1):'';
+    return[s.order, s.side==='left'?'좌측':'우측', s.addr||'', s.bld||'', s.name||'', s.type||'', sq||'', py, s.prev||'', s.status==='vacant'?'공실':'', s.note||''];
+  });
+  const csv='\uFEFF'+[hdr,...rows].map(r=>r.map(csvEsc).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=rn+'_상가현황.csv'; a.click();
+  msg('CSV 다운로드 완료 → Excel에서 바로 열 수 있습니다.');
+}
+
+// ── GitHub 배포용 저장 (데이터를 파일 안에 포함)
+function dlDeployHtml(){
+  const rn=document.getElementById('road-name').value||'가로변 도로';
+  // 현재 파일 HTML을 가져와서 shops 데이터 줄만 교체
+  const src=document.documentElement.outerHTML;
+  const dataLine="let shops = "+JSON.stringify(shops)+";";
+  const updated=src.replace(/let shops\s*=\s*\[[\s\S]*?\];/, dataLine);
+  const blob=new Blob([updated],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sangga.html'; a.click();
+  msg('다운로드 완료 ('+shops.length+'개 데이터 포함) → GitHub에 sangga.html 업로드하세요.');
+}
+
+// ── 시작
+load();
+</script>
+
+
+</body></html>
