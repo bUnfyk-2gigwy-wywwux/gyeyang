@@ -1,0 +1,374 @@
+
+<h2 class="sr-only">가로변 상가 현황 — 면적 자동 환산 포함</h2>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.stat{border-radius:var(--border-radius-md);padding:11px 14px}
+.stat-lbl{font-size:12px;margin-bottom:2px}
+.stat-num{font-size:22px;font-weight:500}
+.controls{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+.street-wrap{overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px 12px;margin-bottom:1rem}
+.street-inner{min-width:max-content}
+.side-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.side-tag{font-size:11px;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:5px 10px;white-space:nowrap;min-width:46px;text-align:center;align-self:stretch;display:flex;align-items:center;justify-content:center}
+.road-strip{height:34px;background:var(--color-background-secondary);display:flex;align-items:center;padding:0 12px;margin:5px 0;border-radius:4px;gap:8px;min-width:100%}
+.road-label{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap}
+.road-dashes{flex:1;border-top:1.5px dashed var(--color-border-secondary)}
+.shops-row{display:flex;gap:6px;align-items:flex-end;min-height:140px;padding:2px 0}
+.shops-row.rr{align-items:flex-start}
+.shop-tile{width:120px;min-height:138px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-primary);padding:9px 9px 8px;cursor:pointer;transition:border-color 0.12s;display:flex;flex-direction:column;gap:3px}
+.shop-tile:hover{border-color:var(--color-border-primary)}
+.shop-tile.active{border:2px solid #F4C0D1}
+.shop-tile.vacant-tile{background:#FDFAFA}
+.shop-num{font-size:10px;color:var(--color-text-tertiary)}
+.shop-name{font-size:13px;font-weight:500;color:var(--color-text-primary);word-break:break-all;line-height:1.3}
+.shop-prev{font-size:11px;color:#D4537E;word-break:break-all;line-height:1.3}
+.shop-type{font-size:11px;color:var(--color-text-secondary)}
+.shop-area{font-size:11px;color:var(--color-text-secondary)}
+.shop-addr{font-size:10px;color:var(--color-text-tertiary);line-height:1.3;word-break:break-all}
+.badge-vacant{font-size:11px;font-weight:500;padding:2px 7px;border-radius:10px;align-self:flex-start;margin-top:auto;background:#FBEAF0;color:#993556}
+.spacer{flex:1}
+.add-tile{width:120px;min-height:138px;border:0.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--color-text-secondary);gap:3px;transition:background 0.12s}
+.add-tile:hover{background:var(--color-background-secondary)}
+#ep{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;background:var(--color-background-primary);display:none;margin-bottom:1rem}
+.etitle{font-size:14px;font-weight:500;margin-bottom:1rem}
+.egrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:1rem}
+.egrid .full{grid-column:1/-1}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:12px;color:var(--color-text-secondary)}
+.area-wrap{display:flex;align-items:center;gap:6px}
+.area-wrap input{flex:1}
+.area-preview{font-size:11px;color:var(--color-text-secondary);white-space:nowrap;min-width:44px}
+.prev-row{display:none}
+.eact{display:flex;gap:8px;justify-content:flex-end;border-top:0.5px solid var(--color-border-tertiary);padding-top:12px}
+.bdel{color:var(--color-text-danger)}
+.road-name-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.road-name-row input{font-size:12px;flex:1;max-width:200px}
+.road-name-lbl{font-size:12px;color:var(--color-text-secondary)}
+#status-msg{font-size:12px;color:var(--color-text-secondary);padding:6px 0 4px;min-height:22px}
+</style>
+
+<div>
+<div id="status-msg">데이터 불러오는 중...</div>
+<div class="stats">
+  <div class="stat" style="background:var(--color-background-secondary)">
+    <div class="stat-lbl" style="color:var(--color-text-secondary)">전체 상가</div>
+    <div class="stat-num" id="s-total">—</div>
+  </div>
+  <div class="stat" style="background:var(--color-background-secondary)">
+    <div class="stat-lbl" style="color:var(--color-text-secondary)">영업중</div>
+    <div class="stat-num" id="s-open">—</div>
+  </div>
+  <div class="stat" style="background:#FBEAF0">
+    <div class="stat-lbl" style="color:#993556">공실</div>
+    <div class="stat-num" style="color:#993556" id="s-vacant">—</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="setF('all')">전체</button>
+  <button onclick="setF('open')">영업중</button>
+  <button onclick="setF('vacant')">공실</button>
+  <button onclick="dlXlsx()" style="margin-left:auto">엑셀 다운로드 ↗</button>
+  <button onclick="openF(null,'left')">+ 좌측 추가 ↗</button>
+  <button onclick="openF(null,'right')">+ 우측 추가 ↗</button>
+</div>
+
+<div class="street-wrap">
+  <div class="street-inner">
+    <div class="road-name-row">
+      <span class="road-name-lbl">도로명:</span>
+      <input type="text" id="road-name" value="" oninput="saveRoad()" placeholder="예) 계산로">
+      <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:auto">진행방향 →</span>
+    </div>
+    <div class="side-row">
+      <div class="side-tag">좌측</div>
+      <div class="shops-row" id="left-shops"></div>
+    </div>
+    <div class="road-strip">
+      <span class="road-label">←</span>
+      <div class="road-dashes"></div>
+      <span id="road-display" style="font-size:12px;color:var(--color-text-secondary);white-space:nowrap">—</span>
+      <div class="road-dashes"></div>
+      <span class="road-label">→</span>
+    </div>
+    <div class="side-row">
+      <div class="side-tag">우측</div>
+      <div class="shops-row rr" id="right-shops"></div>
+    </div>
+  </div>
+</div>
+
+<div id="ep">
+  <div class="etitle" id="etitle">상가 추가</div>
+  <div class="egrid">
+    <div class="fld">
+      <label>측면</label>
+      <select id="f-side"><option value="left">좌측</option><option value="right">우측</option></select>
+    </div>
+    <div class="fld">
+      <label>순번</label>
+      <input type="number" id="f-order" min="1" placeholder="1">
+    </div>
+    <div class="fld">
+      <label>상호명</label>
+      <input type="text" id="f-name" placeholder="상호명 입력">
+    </div>
+    <div class="fld">
+      <label>업종</label>
+      <input type="text" id="f-type" placeholder="예) 음식점, 미용실">
+    </div>
+    <div class="fld">
+      <label>면적 (㎡)</label>
+      <div class="area-wrap">
+        <input type="number" id="f-area" min="0" step="0.1" placeholder="예) 33.0" oninput="updateAreaPreview()">
+        <span class="area-preview" id="area-preview"></span>
+      </div>
+    </div>
+    <div class="fld">
+      <label>건물명 / 위치</label>
+      <input type="text" id="f-bld" placeholder="예) 계양빌딩 1층">
+    </div>
+    <div class="fld full">
+      <label>주소</label>
+      <input type="text" id="f-addr" placeholder="예) 계산로 123, 1층 101호">
+    </div>
+    <div class="fld">
+      <label>공실 여부</label>
+      <select id="f-status" onchange="togglePrev()">
+        <option value="open">영업중 (표시 없음)</option>
+        <option value="vacant">공실</option>
+      </select>
+    </div>
+    <div class="fld prev-row" id="prev-row">
+      <label style="color:#993556">이전 상호명</label>
+      <input type="text" id="f-prev" placeholder="예) 홍익분식">
+    </div>
+    <div class="fld full">
+      <label>비고</label>
+      <input type="text" id="f-note" placeholder="메모 (선택)">
+    </div>
+  </div>
+  <div class="eact">
+    <button class="bdel" id="btn-del" onclick="delShop()" style="display:none">삭제</button>
+    <button onclick="cancelE()">취소</button>
+    <button onclick="saveShop()">저장</button>
+  </div>
+</div>
+</div>
+
+<script>
+let shops=[],eid=null,flt='all';
+const KEYS=['gyeyang-shops-v6','gyeyang-shops-v5','gyeyang-shops-v4','gyeyang-shops-v3','gyeyang-shops-v2'];
+const CUR=KEYS[0],RK='gyeyang-road-v1';
+
+function pyung(sqm){
+  if(!sqm||isNaN(sqm))return '';
+  return (parseFloat(sqm)/3.3058).toFixed(1)+'평';
+}
+function areaStr(sqm){
+  if(!sqm||isNaN(sqm)||parseFloat(sqm)===0)return '';
+  return parseFloat(sqm).toFixed(1)+'㎡ · '+pyung(sqm);
+}
+
+function updateAreaPreview(){
+  const v=document.getElementById('f-area').value;
+  document.getElementById('area-preview').textContent=v?pyung(v):'';
+}
+
+function msg(t){document.getElementById('status-msg').textContent=t;}
+function togglePrev(){
+  const isV=document.getElementById('f-status').value==='vacant';
+  document.getElementById('prev-row').style.display=isV?'flex':'none';
+}
+
+async function tryGet(k){
+  try{const r=await window.storage.get(k);return(r&&r.value)?r.value:null;}catch(e){return null;}
+}
+
+async function load(){
+  let loaded=false;
+  for(const k of KEYS){
+    const v=await tryGet(k);
+    if(v){
+      try{
+        shops=JSON.parse(v);
+        shops.forEach(s=>{
+          if(!s.addr)s.addr='';
+          if(!s.bld)s.bld='';
+          if(!s.prev)s.prev='';
+          if(s.area===undefined)s.area='';
+          if(s.status==='preparing')s.status='open';
+        });
+        if(k!==CUR)await window.storage.set(CUR,JSON.stringify(shops));
+        msg(k===CUR?`저장된 데이터를 불러왔습니다. (${shops.length}개)`:
+          `이전 버전 데이터를 복구했습니다. (${shops.length}개)`);
+        loaded=true;break;
+      }catch(e){}
+    }
+  }
+  if(!loaded){shops=[];msg('저장된 데이터가 없습니다. 새로 입력해 주세요.');}
+  const rn=await tryGet(RK);
+  if(rn){
+    document.getElementById('road-name').value=rn;
+    document.getElementById('road-display').textContent=rn;
+  }
+  render();
+}
+
+async function sv(){try{await window.storage.set(CUR,JSON.stringify(shops));}catch(e){}}
+
+async function saveRoad(){
+  const v=document.getElementById('road-name').value;
+  document.getElementById('road-display').textContent=v||'—';
+  try{await window.storage.set(RK,v);}catch(e){}
+}
+
+function render(){
+  document.getElementById('s-total').textContent=shops.length;
+  document.getElementById('s-open').textContent=shops.filter(s=>s.status==='open').length;
+  document.getElementById('s-vacant').textContent=shops.filter(s=>s.status==='vacant').length;
+  renderSide('left');renderSide('right');
+}
+
+function renderSide(side){
+  const c=document.getElementById(side+'-shops');
+  const list=shops.filter(s=>s.side===side&&(flt==='all'||s.status===flt)).sort((a,b)=>a.order-b.order);
+  c.innerHTML='';
+  list.forEach(s=>c.appendChild(mkTile(s)));
+  const a=document.createElement('div');
+  a.className='add-tile';
+  a.innerHTML='<div style="font-size:18px">+</div><div style="font-size:11px">추가</div>';
+  a.onclick=()=>openF(null,side);
+  c.appendChild(a);
+}
+
+function mkTile(s){
+  const d=document.createElement('div');
+  const isV=s.status==='vacant';
+  d.className='shop-tile'+(isV?' vacant-tile':'')+(eid===s.id?' active':'');
+  d.onclick=()=>openF(s.id);
+
+  const nameHtml=isV
+    ?(s.prev?`<div class="shop-prev">${s.prev}</div>`
+      :`<div class="shop-prev" style="opacity:0.4">이전 상호 없음</div>`)
+    :`<div class="shop-name">${s.name||'—'}</div>`;
+
+  const typeHtml=isV?'':`<div class="shop-type">${s.type||''}</div>`;
+  const areaHtml=areaStr(s.area)?`<div class="shop-area">${areaStr(s.area)}</div>`:'';
+  const addr=s.addr?`<div class="shop-addr">${s.addr}</div>`:'';
+  const badge=isV?'<span class="badge-vacant">공실</span>':'';
+  const note=s.note?`<div style="font-size:10px;color:var(--color-text-tertiary)">${s.note}</div>`:'';
+
+  d.innerHTML=`<div class="shop-num">${s.side==='left'?'좌':'우'}-${s.order}</div>${nameHtml}${typeHtml}${areaHtml}${addr}<div class="spacer"></div>${badge}${note}`;
+  return d;
+}
+
+function openF(id,defSide){
+  eid=id;
+  document.getElementById('ep').style.display='block';
+  const del=document.getElementById('btn-del');
+  if(id){
+    const s=shops.find(x=>x.id===id);
+    document.getElementById('etitle').textContent='상가 수정';
+    document.getElementById('f-side').value=s.side;
+    document.getElementById('f-order').value=s.order;
+    document.getElementById('f-name').value=s.name||'';
+    document.getElementById('f-type').value=s.type||'';
+    document.getElementById('f-area').value=s.area||'';
+    document.getElementById('f-addr').value=s.addr||'';
+    document.getElementById('f-bld').value=s.bld||'';
+    document.getElementById('f-status').value=s.status==='vacant'?'vacant':'open';
+    document.getElementById('f-prev').value=s.prev||'';
+    document.getElementById('f-note').value=s.note||'';
+    del.style.display='';
+  }else{
+    document.getElementById('etitle').textContent='상가 추가';
+    const side=defSide||'left';
+    const mx=Math.max(0,...shops.filter(s=>s.side===side).map(s=>s.order),0);
+    document.getElementById('f-side').value=side;
+    document.getElementById('f-order').value=mx+1;
+    ['f-name','f-type','f-addr','f-bld','f-prev','f-note'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('f-area').value='';
+    document.getElementById('f-status').value='open';
+    del.style.display='none';
+  }
+  updateAreaPreview();
+  togglePrev();
+  render();
+  setTimeout(()=>document.getElementById('ep').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+async function saveShop(){
+  const data={
+    side:document.getElementById('f-side').value,
+    order:parseInt(document.getElementById('f-order').value)||1,
+    name:document.getElementById('f-name').value.trim(),
+    type:document.getElementById('f-type').value.trim(),
+    area:document.getElementById('f-area').value,
+    addr:document.getElementById('f-addr').value.trim(),
+    bld:document.getElementById('f-bld').value.trim(),
+    status:document.getElementById('f-status').value,
+    prev:document.getElementById('f-prev').value.trim(),
+    note:document.getElementById('f-note').value.trim(),
+  };
+  if(eid){
+    const i=shops.findIndex(s=>s.id===eid);
+    shops[i]={...shops[i],...data};
+  }else{
+    shops.push({...data,id:Date.now().toString()});
+  }
+  eid=null;
+  document.getElementById('ep').style.display='none';
+  msg(`저장 완료 (총 ${shops.length}개)`);
+  await sv();render();
+}
+
+async function delShop(){
+  shops=shops.filter(s=>s.id!==eid);
+  eid=null;
+  document.getElementById('ep').style.display='none';
+  msg(`삭제 완료 (총 ${shops.length}개)`);
+  await sv();render();
+}
+
+function cancelE(){
+  eid=null;
+  document.getElementById('ep').style.display='none';
+  render();
+}
+
+function setF(f){flt=f;render();}
+
+function dlXlsx(){
+  if(!window.XLSX){alert('라이브러리 로딩 중입니다. 잠시 후 다시 시도해 주세요.');return;}
+  const roadName=document.getElementById('road-name').value||'가로변 도로';
+  const sorted=[...shops].sort((a,b)=>{
+    if(a.side!==b.side)return a.side==='left'?-1:1;
+    return a.order-b.order;
+  });
+  const headers=['순번','측면','주소','건물명','상호명','업종','면적(㎡)','면적(평)','이전 상호명','공실여부','비고'];
+  const rows=sorted.map(s=>{
+    const sqm=parseFloat(s.area)||'';
+    const py=sqm?(sqm/3.3058).toFixed(1):'';
+    return[
+      s.order,
+      s.side==='left'?'좌측':'우측',
+      s.addr||'',s.bld||'',s.name||'',s.type||'',
+      sqm||'',py,
+      s.prev||'',
+      s.status==='vacant'?'공실':'',
+      s.note||''
+    ];
+  });
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols']=[{wch:6},{wch:8},{wch:22},{wch:16},{wch:16},{wch:14},{wch:10},{wch:8},{wch:16},{wch:10},{wch:24}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'상가현황');
+  XLSX.writeFile(wb,`${roadName}_상가현황.xlsx`);
+  msg('엑셀 파일 다운로드 완료');
+}
+
+load();
+</script>
