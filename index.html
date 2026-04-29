@@ -837,10 +837,6 @@
   .fade-up:nth-child(3) { transition-delay: 0.2s; }
   .fade-up:nth-child(4) { transition-delay: 0.3s; }
 </style>
- <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script>
-  emailjs.init({ publicKey: "3aPYtITBhPBSz4mys", blockHeadless: false });
-</script>
 </head>
 <body>
 
@@ -1204,29 +1200,24 @@
 
   // 문의 폼 전송
   function submitForm() {
-  const name = document.getElementById('inputName').value.trim();
-  const phone = document.getElementById('inputPhone').value.trim();
-  const type = document.getElementById('inputType').value;
-  const message = document.getElementById('inputMessage').value.trim();
-  const privacy = document.getElementById('privacyCheck').checked;
-  if (!name) { alert('이름을 입력해주세요.'); return; }
-  if (!phone) { alert('연락처를 입력해주세요.'); return; }
-  if (!privacy) { alert('개인정보 수집·이용에 동의해주세요.'); return; }
-  const btn = document.querySelector('.form-submit');
-  btn.textContent = '전송 중...';
-  btn.disabled = true;
-  emailjs.send('service_k6pfbxm', 'template_40974a8', {
-    name: name, phone: phone,
-    type: type || '미선택', message: message || '없음'
-  }).then(() => {
+    const name = document.getElementById('inputName').value.trim();
+    const phone = document.getElementById('inputPhone').value.trim();
+    const type = document.getElementById('inputType').value;
+    const message = document.getElementById('inputMessage').value.trim();
+    const privacy = document.getElementById('privacyCheck').checked;
+
+    if (!name) { alert('이름을 입력해주세요.'); return; }
+    if (!phone) { alert('연락처를 입력해주세요.'); return; }
+    if (!privacy) { alert('개인정보 수집·이용에 동의해주세요.'); return; }
+
+    const text = `[계양부동산 문의]\n이름: ${name}\n연락처: ${phone}\n유형: ${type || '미선택'}\n내용: ${message || '없음'}`;
+    const kakaoUrl = `http://pf.kakao.com/_NmKTX/chat`;
+
     document.getElementById('contactForm').style.display = 'none';
     document.getElementById('formSuccess').style.display = 'block';
-  }).catch((error) => {
-    alert('전송 중 오류가 발생했습니다. 카카오 채널로 직접 문의해 주세요.');
-    btn.textContent = '카카오톡으로 문의 전송';
-    btn.disabled = false;
-  });
-}
+
+    setTimeout(() => { window.open(kakaoUrl, '_blank'); }, 600);
+  }
 
   // 스크롤 위치에 따라 네비 메뉴 활성화
   const sections = document.querySelectorAll('section[id], div[id="hero"]');
